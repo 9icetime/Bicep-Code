@@ -1,11 +1,13 @@
 param AppInsight string 
 
+param location string 
+
 // Connect Application Insight with App Service using instrumentation key
 // To connect application insight with app service, we have to take the instrumentation key from app insight and code it in app setting properties
 
 resource azbicepappInsights 'Microsoft.Insights/components@2020-02-02' = {
   name: AppInsight
-  location: resourceGroup().location
+  location: location
   kind: 'web'
   properties: {
     Application_Type: 'web'

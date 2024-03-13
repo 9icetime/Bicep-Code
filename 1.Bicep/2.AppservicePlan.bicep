@@ -6,14 +6,14 @@ param Appservice string
 
 param Instrumentationkey string 
 
-
+param location string 
 
 
 
 
 resource azbicepaspl 'Microsoft.Web/serverfarms@2020-12-01' = {
   name: AppservicePlan
-  location: resourceGroup().location
+  location: location
   sku: {
     name: 'S1'
     capacity: 1
@@ -22,7 +22,7 @@ resource azbicepaspl 'Microsoft.Web/serverfarms@2020-12-01' = {
 
 resource azbicepas 'Microsoft.Web/sites@2023-01-01' = {
   name: Appservice
-  location: resourceGroup().location
+  location: location
   properties: {
     serverFarmId: resourceId('Microsoft.Web/serverfarms', 'azbicep-dev-eus-aspl')
   }
