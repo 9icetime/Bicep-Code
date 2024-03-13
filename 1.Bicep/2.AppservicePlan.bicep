@@ -24,7 +24,7 @@ resource azbicepas 'Microsoft.Web/sites@2023-01-01' = {
   name: Appservice
   location: resourceGroup().location
   properties: {
-    serverFarmId: resourceId('Microsoft.Web/serverfarms', 'azbicep-stg-eus-aspl')
+    serverFarmId: resourceId('Microsoft.Web/serverfarms', 'azbicep-dev-eus-aspl')
   }
   dependsOn:[
     azbicepaspl
