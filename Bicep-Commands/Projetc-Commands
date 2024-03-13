@@ -1,0 +1,304 @@
+(1) Command and code for creating resources Group
+
+
+targetScope = 'subscription'
+
+resource azbicepresourcegroup 'Microsoft.Resources/resourceGroups@2023-07-01' = {
+  name: 'azbicep-dev-eus-rg1'
+  location: 'eastus'
+}
+
+az deployment sub create -l eastus -f 1.ResourceGroup.bicep
+
+
+
+(2) Command and code for creating AppservicePlan 
+
+// The below codes is for AppservicePlan using Window operating system
+
+
+resource azbicepaspl 'Microsoft.Web/serverfarms@2020-12-01' = {
+  name: 'azbicep-dev-eus-aspl'
+  location: resourceGroup().location
+  sku: {
+    name: 'S1'
+    capacity: 1
+  }
+}
+
+
+ 
+// The below codes is for AppservicePlan using Linux operating system
+
+
+resource azbicepaspl 'Microsoft.Web/serverfarms@2020-12-01' = {
+  name: 'azbicep-dev-eus-linuxasp'
+  kind: 'linux'
+  Properties: {
+
+   reserved: true               
+ }
+  location: resourceGroup().location
+  sku: {
+    name: 'S1'
+    capacity: 1
+  }
+}
+
+
+az deployment group create -g azbicep-dev-eus-rg1 -f 2.AppservicePlan.bicep
+
+
+
+
+
+(3) Command and code for creating App service (Webapp)
+
+ 
+
+resource azbicepas 'Microsoft.Web/sites@2023-01-01' = {
+  name: azbicep-dev-eus-wapp1
+  location: resourceGroup().location
+  properties: {
+    serverFarmId: resourceId('Microsoft.Web/serverfarms', 'azbicep-dev-eus-aspl')
+  }
+  
+dependsOn:[
+    azbicepaspl
+  ]
+}
+
+
+az deployment group create -g azbicep-dev-eus-rg1 -f 2.AppservicePlan.bicep
+
+
+
+
+(4) Command and code for creating App Insight
+
+
+resource azbicepappInsights 'Microsoft.Insights/components@2020-02-02' = {
+  name: 'azbicep-dev-eus-wapp248-ai'
+  location: resourceGroup().location
+  kind: 'web'
+  properties: {
+    Application_Type: 'web'
+  }
+}
+
+az deployment group create -g azbicep-dev-eus-rg1 -f 2.AppservicePlan.bicep
+
+
+
+
+(5) Command and code for creating App Setting
+
+// In other for app insight to connect with app service which is(Web app), you have to create 
+   app setting.
+  
+The setting is a child of app Service.
+
+Note: If you want to create app setting you must remember to provide the key Name and the Value.
+
+
+
+
+
+resource azbicepwebappsetting 'Microsoft.Web/sites/config@2023-01-01' = {
+  name: 'web'
+  parent: azbicepas
+  properties: {
+    appSettings: [
+      {
+        name: 'key1'
+        value: 'value1'
+
+ // Note, the name and value above should be replace with what I have below
+
+        name: 'APPINSIGHTS_INSTRUMENTATIONKEY'
+        value: azbicepappInsights.properties.InstrumentationKey
+      }
+      {
+        name: 'key2'
+        value: 'value2'
+      }
+    ]
+  }
+}
+
+
+az deployment group create -g azbicep-dev-eus-rg1 -f 2.AppservicePlan.bicep
+
+
+
+
+(6) Connect Application Insight with App Service using instrumentation key
+
+// To connect application insight with app service, we have to take the instrumentation key from app insight and code it in app setting
+    properties
+
+
+
+
+resource azbicepappInsights 'Microsoft.Insights/components@2020-02-02' = {
+  name: 'azbicep-dev-eus-wapp248-ai'
+  location: resourceGroup().location
+  kind: 'web'
+  properties: {
+    Application_Type: 'web'
+  }
+}
+
+
+az deployment group create -g azbicep-dev-eus-rg1 -f 2.AppservicePlan.bicep
+
+
+
+
+(7) Command and code for creating Storage Account
+
+
+resource storageAccount 'Microsoft.Storage/storageAccounts@2021-06-01' = {
+  name: 'azbicepdeveussa774'
+  location: resourceGroup().location
+  sku: {
+    name: 'Premium_LRS'
+  }
+  kind: 'StorageV2'
+  properties: {
+    accessTier: 'Cool'
+  }
+}
+
+az deployment group create -g azbicep-dev-eus-rg1 -f 3.StorageAccount.bicep
+
+
+
+                                                                          Next step is Module
+
+                  How to invoke App service plan module?
+
+
+
+
+// Module must carry a file path.
+// The symbolic name on module does not matter, what really matter is the file name.
+
+
+param AppservicePlan string = 'azbicep-dev-eus-aspl'
+param Appservice string = 'azbicep-dev-eus-wapp248'
+param AppInsight string = 'azbicep-dev-eus-wapp248-ai'
+param StorageAccount string = 'azbicepdeveussa774'
+
+
+
+module AppservicePlan '2.AppservicePlan.bicep' = {
+  name: 'AppServicePlan'
+}
+module StorageAccount '3.StorageAccount.bicep' = {
+  name: 'StorageAccount'
+}
+
+
+az deployment group create -g azbicep-dev-eus-rg1 -f 0.Main.bicep
+
+
+Once you take off the hard coded value from parameters in resource file and bring them to module file. It will look like the example below
+
+
+param AppservicePlan string = 'azbicep-dev-eus-aspl'
+param Appservice string = 'azbicep-dev-eus-wapp248'
+param AppInsight string = 'azbicep-dev-eus-wapp248-ai'
+param StorageAccount string = 'azbicepdeveussa774'
+
+
+
+module pAppservicePlan '2.AppservicePlan.bicep' = {
+  name: 'AppServicePlan'
+  params:{
+    AppInsight: AppInsight
+    Appservice: Appservice
+    AppservicePlan: AppservicePlan
+  }
+}
+module pStorageAccount '3.StorageAccount.bicep' = {
+  name: 'StorageAccount'
+  params:{
+    StorageAccount: StorageAccount
+  }
+}
+
+
+
+
+
+
+                                                                  Next step is Parameters
+
+Note. The reason why parameter is so important is because if you hard code all resources or properties name, when you run it at the first time,
+           it will work in the first environment but when you take same script and run it in a different environment, you will jump into so many errors. The names must be unique.
+With parameter this problem can be solve.
+
+It is recommended to manage all parameters in one single place.
+
+
+
+
+
+//param paramName Type(array, bool, int, objet, secureObject, secureString, string) = DefaultValue (name)
+
+// Take off the hard code value from the parameters file you created your resources. Send them to module file.
+
+param AppservicePlan string = 'azbicep-dev-eus-aspl'
+param Appservice string = 'azbicep-dev-eus-wapp248'
+param AppInsight string = 'azbicep-dev-eus-wapp248-ai'
+param StorageAccount string = 'azbicepdeveussa774'
+
+
+
+
+resource azbicepaspl 'Microsoft.Web/serverfarms@2020-12-01' = {
+  name: AppservicePlan
+  location: resourceGroup().location
+  sku: {
+    name: 'S1'
+    capacity: 1
+  }
+}
+resource azbicepas 'Microsoft.Web/sites@2023-01-01' = {
+  name: Appservice
+  location: resourceGroup().location
+  properties: {
+    serverFarmId: resourceId('Microsoft.Web/serverfarms', 'azbicep-dev-eus-aspl')
+  }
+  dependsOn:[
+    azbicepaspl
+  ]
+}
+resource azbicepwebappsetting 'Microsoft.Web/sites/config@2023-01-01' = {
+  name: 'web'
+  parent: azbicepas
+  properties: {
+    appSettings: [
+      {
+        name: 'APPINSIGHTS_INSTRUMENTATIONKEY'
+        value: azbicepappInsights.properties.InstrumentationKey
+      }
+      {
+        name: 'key2'
+        value: 'value2'
+      }
+    ]
+  }
+}
+// Connect Application Insight with App Service using instrumentation key
+// To connect application insight with app service, we have to take the instrumentation key from app insight and code it in app setting properties
+resource azbicepappInsights 'Microsoft.Insights/components@2020-02-02' = {
+  name: AppInsight
+  location: resourceGroup().location
+  kind: 'web'
+  properties: {
+    Application_Type: 'web'
+  }
+}
+
