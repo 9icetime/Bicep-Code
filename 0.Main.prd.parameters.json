@@ -1,0 +1,18 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "AppservicePlan": {
+            "value": "azbicep-prd-eus-aspl"
+        },
+        "Appservice": {
+            "value": "azbicep-prd-eus-wapp248"
+        },
+        "AppInsight": {
+            "value": "azbicep-prd-eus-wapp248-ai"
+        },
+        "StorageAccount": {
+            "value": "azbicepprdeussa774"
+        }
+    }
+}
