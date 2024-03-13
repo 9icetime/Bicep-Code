@@ -302,3 +302,114 @@ resource azbicepappInsights 'Microsoft.Insights/components@2020-02-02' = {
   }
 }
 
+ Communication between Bicep Modules using Output Parameters.
+
+What did we do here.
+ First we created another file for App Insight, at first App Insight was in same file with App service plan, App service and App Setting. We also created an output command since App Service will be calling for it.
+
+Now we created a file and called it AppInsights. Below are the code.
+We also created a parameter here without hard coding it.
+
+
+param AppInsight string 
+
+
+resource azbicepappInsights 'Microsoft.Insights/components@2020-02-02' = {
+  name: AppInsight
+  location: resourceGroup().location
+  kind: 'web'
+  properties: {
+    Application_Type: 'web'
+  }
+}
+output oInstrumentationkey string =azbicepappInsights.properties.InstrumentationKey
+
+
+
+The Next Step, we created a parameter called INSTRUMENTATION KEY in App Service Plan file and the reason for this is because app service has a child called App setting that is responsible for pulling the INSTRUMENTATION KEY from App Insights. 
+
+Below are the codes 
+
+
+
+
+param AppservicePlan string
+param Appservice string 
+param Instrumentationkey string 
+
+
+resource azbicepaspl 'Microsoft.Web/serverfarms@2020-12-01' = {
+  name: AppservicePlan
+  location: resourceGroup().location
+  sku: {
+    name: 'S1'
+    capacity: 1
+  }
+}
+resource azbicepas 'Microsoft.Web/sites@2023-01-01' = {
+  name: Appservice
+  location: resourceGroup().location
+  properties: {
+    serverFarmId: resourceId('Microsoft.Web/serverfarms', 'azbicep-dev-eus-aspl')
+  }
+  dependsOn:[
+    azbicepaspl
+  ]
+}
+resource azbicepwebappsetting 'Microsoft.Web/sites/config@2023-01-01' = {
+  name: 'web'
+  parent: azbicepas
+  properties: {
+    appSettings: [
+      {
+        name: 'APPINSIGHTS_INSTRUMENTATIONKEY'
+        value: Instrumentationkey
+      }
+      {
+        name: 'key2'
+        value: 'value2'
+      }
+    ]
+  }
+}
+
+
+
+Next step
+                 We created a module for App Insight since is now in a separate file. In this file you find all parameters of all resources and modules for all files created.
+
+
+Below are the codes you will find in Module file. In our case we name it as Main.bicep.
+
+
+
+param AppservicePlan string = 'azbicep-dev-eus-aspl'
+param Appservice string = 'azbicep-dev-eus-wapp248'
+param AppInsight string = 'azbicep-dev-eus-wapp248-ai'
+param StorageAccount string = 'azbicepdeveussa774'
+
+
+
+module pAppservicePlan '2.AppservicePlan.bicep' = {
+  name: 'AppServicePlan'
+  params:{
+    Appservice: Appservice
+    AppservicePlan: AppservicePlan
+    Instrumentationkey:AppInsights.outputs.oInstrumentationkey
+  }
+}
+module pStorageAccount '3.StorageAccount.bicep' = {
+  name: 'StorageAccount'
+  params:{
+    StorageAccount: StorageAccount
+  }
+}
+module AppInsights '4.AppInsights.bicep' = {
+  name: 'AppIsight'
+  params: {
+    AppInsight: AppInsight
+  }
+}
+
+
+
